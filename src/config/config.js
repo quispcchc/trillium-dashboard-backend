@@ -8,5 +8,12 @@ module.exports = {
   POWER_BI_REPORT_ID: process.env.POWER_BI_REPORT_ID || 'your-powerbi-report-id',
   POWER_BI_GROUP_ID: process.env.POWER_BI_GROUP_ID || 'your-powerbi-group-id',
   EMAIL_USER: process.env.EMAIL_USER,
-  EMAIL_PASS: process.env.EMAIL_PASS
+  EMAIL_PASS: process.env.EMAIL_PASS,
+  DB_CONFIG: {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'your-database-password',
+    database: process.env.DB_NAME || 'your-database-name'
+  }
 };

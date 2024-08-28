@@ -2,77 +2,95 @@ const jwt = require('jsonwebtoken'); // Import jsonwebtoken
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('../utils/mailer');
-const { JWT_SECRET } = require('../config/config');
+const { JWT_SECRET, DB_CONFIG } = require('../config/config');
+const mysql = require('mysql2');
 
-// In-memory user storage (for demonstration)
-const users = [
-  {
-    username: 'quisp@carlingtonchc.org',
-    password: bcrypt.hashSync('AliVeli123.', 10), // hashed password
-    resetToken: null, // Field for storing reset token
-    resetTokenExpiry: null // Field for storing reset token expiry time
-  }
-];
+// Create a MySQL connection pool
+const pool = mysql.createPool(DB_CONFIG);
+const promisePool = pool.promise();
 
-const login = (req, res) => {
+const login = async (req, res) => {
   const { username, password } = req.body;
-  const user = users.find(u => u.username === username);
+  
+  try {
+    // Fetch user from the database
+    const [rows] = await promisePool.query('SELECT * FROM users WHERE mail = ?', [username]);
+    const user = rows[0];
 
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ message: 'Invalid username or password' });
-  }
-
-  const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ token });
-};
-
-const resetPassword = (req, res) => {
-  const { email } = req.body;
-  const user = users.find(u => u.username === email);
-
-  if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-
-  // Generate a reset token and expiry time
-  const resetToken = crypto.randomBytes(20).toString('hex');
-  const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
-
-  user.resetToken = resetToken;
-  user.resetTokenExpiry = resetTokenExpiry;
-
-  // Send reset email
-  const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Password Reset',
-    text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`
-  };
-
-  nodemailer.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('Error sending email:', error);
-      return res.status(500).json({ message: 'Error sending email' });
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ message: 'Invalid username or password' });
     }
-    res.json({ message: 'Password reset email sent' });
-  });
+
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
-const resetPasswordWithToken = (req, res) => {
+
+const resetPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const [rows] = await promisePool.query('SELECT * FROM users WHERE mail = ?', [email]);
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Format the expiry date to MySQL DATETIME format
+      const formattedExpiry = resetTokenExpiry.toISOString().slice(0, 19).replace('T', ' ');
+
+    await promisePool.query('UPDATE users SET resetToken = ?, resetTokenExpiry = ? WHERE mail = ?', [resetToken, formattedExpiry, email]);
+
+    const resetUrl = `http://localhost:4200/reset-password/${resetToken}`;
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset',
+      text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`
+    };
+
+    nodemailer.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('Error sending email:', error);
+        return res.status(500).json({ message: 'Error sending email' });
+      }
+      res.json({ message: 'Password reset email sent' });
+    });
+  } catch (error) {
+    console.error('Error processing password reset request:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Reset Password with Token
+const resetPasswordWithToken = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
-  const user = users.find(u => u.resetToken === token && u.resetTokenExpiry > Date.now());
 
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid or expired reset token' });
+  try {
+    const [rows] = await promisePool.query('SELECT * FROM users WHERE resetToken = ? AND resetTokenExpiry > ?', [token, Date.now()]);
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    await promisePool.query('UPDATE users SET password = ?, resetToken = NULL, resetTokenExpiry = NULL WHERE mail = ?', [hashedPassword, user.mail]);
+
+    res.json({ message: 'Password has been reset' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-
-  user.password = bcrypt.hashSync(password, 10);
-  user.resetToken = null;
-  user.resetTokenExpiry = null;
-
-  res.json({ message: 'Password has been reset' });
 };
 
 module.exports = { login, resetPassword, resetPasswordWithToken };
