@@ -32,10 +32,64 @@ const login = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail FROM users');
+    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title FROM users');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const createUser = async (req, res) => {
+  const { first_name, last_name, mail, department, job_title, password } = req.body;
+
+  try {
+    // Checking if the user already exists
+    const [existingUserRows] = await promisePool.query('SELECT * FROM users WHERE mail = ?', [mail]);
+    if (existingUserRows.length > 0) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Hash the password before storing it
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
+    // Insert the new user into the database
+    const [result] = await promisePool.query(
+      'INSERT INTO users (first_name, last_name, mail, department, job_title, password) VALUES (?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, department, job_title, hashedPassword]
+    );
+
+    // Fetch the newly created user
+    const newUser = {
+      user_id: result.insertId,
+      first_name,
+      last_name,
+      mail,
+      department,
+      job_title,
+    };
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  const { id } = req.params; // Assuming userId is passed as a URL parameter
+
+  try {
+    // Delete the user from the database
+    const [result] = await promisePool.query('DELETE FROM users WHERE user_id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(204).send(); // No content response
+  } catch (error) {
+    console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -105,4 +159,4 @@ const resetPasswordWithToken = async (req, res) => {
   }
 };
 
-module.exports = { login, getAllUsers, resetPassword, resetPasswordWithToken };
+module.exports = { login, getAllUsers, createUser, deleteUser, resetPassword, resetPasswordWithToken };
