@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const  authenticateJWT  = require('../middleware/authMiddleware.js');
 
 router.post('/login', authController.login);
-
-// Route to request password reset
+router.get('/users', authenticateJWT, authController.getAllUsers);
 router.post('/reset-password', authController.resetPassword);
-
-// Route to reset password with token
 router.post('/reset-password/:token', authController.resetPasswordWithToken);
 
 module.exports = router;

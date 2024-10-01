@@ -22,9 +22,20 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
+    res.json({ token, userName: user.first_name});
   } catch (error) {
     console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+const getAllUsers = async (req, res) => {
+  try {
+    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail FROM users');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -70,6 +81,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
+
 // Reset Password with Token
 const resetPasswordWithToken = async (req, res) => {
   const { token } = req.params;
@@ -93,4 +105,4 @@ const resetPasswordWithToken = async (req, res) => {
   }
 };
 
-module.exports = { login, resetPassword, resetPasswordWithToken };
+module.exports = { login, getAllUsers, resetPassword, resetPasswordWithToken };

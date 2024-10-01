@@ -1,8 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { authenticateJWT } = require('./src/middleware/authMiddleware');
-const { login, resetPassword, resetPasswordWithToken } = require('./src/controllers/authController');
+const  authenticateJWT  = require('./src/middleware/authMiddleware');
+const { login, getAllUsers, resetPassword, resetPasswordWithToken } = require('./src/controllers/authController');
 const { getPowerBIReport } = require('./src/services/powerBiService');
 const authRoutes = require('./src/routes/authRoutes');
 
@@ -15,6 +15,7 @@ app.use('/api', authRoutes);
 
 // Routes
 app.post('/login', login);
+app.get('/users', authenticateJWT, getAllUsers);
 app.post('/reset-password', resetPassword);
 app.post('/reset-password/:token', resetPasswordWithToken);
 app.get('/report', authenticateJWT, getPowerBIReport);
