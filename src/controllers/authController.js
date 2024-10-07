@@ -32,7 +32,7 @@ const login = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title FROM users');
+    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title, role FROM users');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -41,7 +41,7 @@ const getAllUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { first_name, last_name, mail, department, job_title, password } = req.body;
+  const { first_name, last_name, mail, role, department, job_title, password } = req.body;
 
   try {
     // Checking if the user already exists
@@ -55,8 +55,8 @@ const createUser = async (req, res) => {
 
     // Insert the new user into the database
     const [result] = await promisePool.query(
-      'INSERT INTO users (first_name, last_name, mail, department, job_title, password) VALUES (?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, mail, department, job_title, hashedPassword]
+      'INSERT INTO users (first_name, last_name, mail, role, department, job_title, password) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, role, department, job_title, hashedPassword]
     );
 
     // Fetch the newly created user
@@ -65,6 +65,7 @@ const createUser = async (req, res) => {
       first_name,
       last_name,
       mail,
+      role,
       department,
       job_title,
     };
@@ -77,7 +78,7 @@ const createUser = async (req, res) => {
 };
 
 const deleteUser = async (req, res) => {
-  const { id } = req.params; // Assuming userId is passed as a URL parameter
+  const { id } = req.params;
 
   try {
     // Delete the user from the database
@@ -94,6 +95,70 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const updateUser = async (req, res) => {
+  const { user_id, first_name, last_name, mail, role, department, job_title, password } = req.body;
+
+  try {
+    // Fetch the user from the database
+    const [rows] = await promisePool.query('SELECT * FROM users WHERE user_id = ?', [user_id]);
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prepare the update query and parameters
+    const updates = [];
+    const params = [];
+
+    // Update fields only if they are provided
+    if (first_name) {
+      updates.push('first_name = ?');
+      params.push(first_name);
+    }
+    if (last_name) {
+      updates.push('last_name = ?');
+      params.push(last_name);
+    }
+    if (mail) {
+      updates.push('mail = ?');
+      params.push(mail);
+    }
+    if (role) {
+      updates.push('role = ?');
+      params.push(role);
+    }
+    if (department) {
+      updates.push('department = ?');
+      params.push(department);
+    }
+    if (job_title) {
+      updates.push('job_title = ?');
+      params.push(job_title);
+    }
+    if (password) {
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      updates.push('password = ?');
+      params.push(hashedPassword);
+    }
+
+    // If no fields to update, return a message
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    // Combine updates and execute query
+    const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE user_id = ?`;
+    params.push(user_id);
+
+    await promisePool.query(updateQuery, params);
+
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 const resetPassword = async (req, res) => {
   const { email } = req.body;
@@ -159,4 +224,4 @@ const resetPasswordWithToken = async (req, res) => {
   }
 };
 
-module.exports = { login, getAllUsers, createUser, deleteUser, resetPassword, resetPasswordWithToken };
+module.exports = { login, getAllUsers, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken };
