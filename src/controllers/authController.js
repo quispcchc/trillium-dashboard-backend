@@ -40,8 +40,18 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const getAuditLogs = async (req, res) => {
+  try {
+    const [rows] = await promisePool.query('SELECT * FROM audit_logs');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 const createUser = async (req, res) => {
-  const { first_name, last_name, mail, role, department, job_title, password } = req.body;
+  const { first_name, last_name, mail, role, department, job_title, password, created_by } = req.body;
 
   try {
     // Checking if the user already exists
@@ -55,8 +65,14 @@ const createUser = async (req, res) => {
 
     // Insert the new user into the database
     const [result] = await promisePool.query(
-      'INSERT INTO users (first_name, last_name, mail, role, department, job_title, password) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, mail, role, department, job_title, hashedPassword]
+      'INSERT INTO users (first_name, last_name, mail, role, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, role, department, job_title, hashedPassword, created_by]
+    );
+
+   // Insert into audit log
+    await promisePool.query(
+      'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
+      [created_by, `Created user with email: ${mail}`]
     );
 
     // Fetch the newly created user
@@ -88,6 +104,12 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Insert into audit log
+    await promisePool.query(
+      'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
+      [created_by, `Deleted user with email: ${mail}`]
+    );
+
     res.status(204).send(); // No content response
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -96,7 +118,7 @@ const deleteUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-  const { user_id, first_name, last_name, mail, role, department, job_title, password } = req.body;
+  const { user_id, first_name, last_name, mail, role, department, job_title, password, updated_by } = req.body;
 
   try {
     // Fetch the user from the database
@@ -110,36 +132,49 @@ const updateUser = async (req, res) => {
     // Prepare the update query and parameters
     const updates = [];
     const params = [];
+    const details = [];
 
     // Update fields only if they are provided
     if (first_name) {
       updates.push('first_name = ?');
       params.push(first_name);
+      details.push(`first_name changed from ${user.first_name} to ${first_name}`);
     }
     if (last_name) {
       updates.push('last_name = ?');
       params.push(last_name);
+      details.push(`last_name changed from ${user.last_name} to ${last_name}`);
     }
     if (mail) {
       updates.push('mail = ?');
       params.push(mail);
+      details.push(`mail changed from ${user.mail} to ${mail}`);
     }
     if (role) {
       updates.push('role = ?');
       params.push(role);
+      details.push(`role changed from ${user.role} to ${role}`);
     }
     if (department) {
       updates.push('department = ?');
       params.push(department);
+      details.push(`department changed from ${user.department} to ${department}`);
     }
     if (job_title) {
       updates.push('job_title = ?');
       params.push(job_title);
+      details.push(`job_title changed from ${user.job_title} to ${job_title}`);
     }
     if (password) {
       const hashedPassword = bcrypt.hashSync(password, 10);
       updates.push('password = ?');
       params.push(hashedPassword);
+      details.push('Password updated');
+    }
+
+    if (updated_by) {
+      updates.push('updated_by = ?');
+      params.push(updated_by);
     }
 
     // If no fields to update, return a message
@@ -152,6 +187,12 @@ const updateUser = async (req, res) => {
     params.push(user_id);
 
     await promisePool.query(updateQuery, params);
+
+ // Insert into audit log
+    await promisePool.query(
+      'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
+      [updated_by, `${user.mail} User Updated : ${details.join('; ')}`]
+    );
 
     res.json({ message: 'User updated successfully' });
   } catch (error) {
@@ -224,4 +265,4 @@ const resetPasswordWithToken = async (req, res) => {
   }
 };
 
-module.exports = { login, getAllUsers, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken };
+module.exports = { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken };
