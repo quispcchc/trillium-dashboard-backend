@@ -22,7 +22,7 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, userName: user.first_name});
+    res.json({ token, userName: user.first_name, userRole: user.role});
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Internal server error' });
