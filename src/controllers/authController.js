@@ -95,6 +95,7 @@ const createUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   const { id } = req.params;
+  const { updated_by, mail } = req.body;
 
   try {
     // Delete the user from the database
@@ -107,7 +108,7 @@ const deleteUser = async (req, res) => {
     // Insert into audit log
     await promisePool.query(
       'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
-      [created_by, `Deleted user with email: ${mail}`]
+      [updated_by, `Deleted user with email: ${mail}`]
     );
 
     res.status(204).send(); // No content response
@@ -135,32 +136,32 @@ const updateUser = async (req, res) => {
     const details = [];
 
     // Update fields only if they are provided
-    if (first_name) {
+    if (first_name && first_name !== user.first_name) {
       updates.push('first_name = ?');
       params.push(first_name);
       details.push(`first_name changed from ${user.first_name} to ${first_name}`);
     }
-    if (last_name) {
+    if (last_name && last_name !== user.last_name) {
       updates.push('last_name = ?');
       params.push(last_name);
       details.push(`last_name changed from ${user.last_name} to ${last_name}`);
     }
-    if (mail) {
+    if (mail && mail !== user.mail) {
       updates.push('mail = ?');
       params.push(mail);
       details.push(`mail changed from ${user.mail} to ${mail}`);
     }
-    if (role) {
+    if (role && role !== user.role) {
       updates.push('role = ?');
       params.push(role);
       details.push(`role changed from ${user.role} to ${role}`);
     }
-    if (department) {
+    if (department && department !== user.department) {
       updates.push('department = ?');
       params.push(department);
       details.push(`department changed from ${user.department} to ${department}`);
     }
-    if (job_title) {
+    if (job_title && job_title !== user.job_title) {
       updates.push('job_title = ?');
       params.push(job_title);
       details.push(`job_title changed from ${user.job_title} to ${job_title}`);
@@ -188,11 +189,13 @@ const updateUser = async (req, res) => {
 
     await promisePool.query(updateQuery, params);
 
- // Insert into audit log
-    await promisePool.query(
-      'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
-      [updated_by, `${user.mail} User Updated : ${details.join('; ')}`]
-    );
+    // Insert into audit log only the changes that were made
+    if (details.length > 0) {
+      await promisePool.query(
+        'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
+        [updated_by, `${user.mail} User Updated: ${details.join('; ')}`]
+      );
+    }
 
     res.json({ message: 'User updated successfully' });
   } catch (error) {
