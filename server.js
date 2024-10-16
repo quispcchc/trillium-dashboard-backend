@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const  authenticateJWT  = require('./src/middleware/authMiddleware');
 const { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken } = require('./src/controllers/authController');
-const { getPowerBIReport } = require('./src/services/powerBiService');
 const authRoutes = require('./src/routes/authRoutes');
 
 const app = express();
@@ -22,7 +21,6 @@ app.delete('/users/:id', deleteUser);
 app.put('/users/:id', updateUser);
 app.post('/reset-password', resetPassword);
 app.post('/reset-password/:token', resetPasswordWithToken);
-app.get('/report', authenticateJWT, getPowerBIReport);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
