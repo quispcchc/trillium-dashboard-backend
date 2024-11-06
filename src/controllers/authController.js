@@ -223,7 +223,7 @@ const resetPassword = async (req, res) => {
 
     await promisePool.query('UPDATE users SET resetToken = ?, resetTokenExpiry = ? WHERE mail = ?', [resetToken, formattedExpiry, email]);
 
-    const resetUrl = `http://localhost:4200/reset-password/${resetToken}`;
+    const resetUrl = `https://frontend-dot-trillium-dashboard.nn.r.appspot.com/reset-password/${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
