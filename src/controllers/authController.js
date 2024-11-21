@@ -177,18 +177,18 @@ const updateUser = async (req, res) => {
     }
     if (accessible_tabs) {
       const tabsJSON = JSON.stringify(accessible_tabs);
-      if (tabsJSON !== user.accessible_tabs) {
+      if (tabsJSON !== JSON.stringify(user.accessible_tabs)) {
         updates.push('accessible_tabs = ?');
         params.push(tabsJSON);
-        details.push(`accessible tabs updated to ${accessible_tabs.join(', ')}`);
+        details.push(`accessible tabs updated to ${accessible_tabs.length > 0 ? accessible_tabs.join(', ') : 'none'}`);
       }
     }
     if (accessible_forms) {
       const formsJSON = JSON.stringify(accessible_forms);
-      if (formsJSON !== user.accessible_forms) {
+      if (formsJSON !== JSON.stringify(user.accessible_forms)) {
         updates.push('accessible_forms = ?');
         params.push(formsJSON);
-        details.push(`accessible forms updated to ${accessible_forms.join(', ')}`);
+        details.push(`accessible forms updated to ${accessible_forms.length > 0 ? accessible_forms.join(', ') : 'none'}`);
       }
     }
     if (updated_by) {
