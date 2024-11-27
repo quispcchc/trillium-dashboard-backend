@@ -22,7 +22,7 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, userName: user.first_name, userRole: user.role, userEmail: user.mail, accessibleRoles: user.accessible_roles, accessibleForms: user.accessible_forms});
+    res.json({ token, userName: user.first_name, userRole: user.role, userEmail: user.mail, accessibleTabs: user.accessible_tabs, accessibleForms: user.accessible_forms});
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -32,7 +32,7 @@ const login = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title, role, accessible_roles, accessible_forms FROM users');
+    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title, role, accessible_tabs, accessible_forms FROM users');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -51,7 +51,7 @@ const getAuditLogs = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { first_name, last_name, mail, roles, forms, department, job_title, password, created_by } = req.body;
+  const { first_name, last_name, mail, tabs, forms, department, job_title, password, created_by } = req.body;
 
   try {
     // Checking if the user already exists
@@ -62,13 +62,13 @@ const createUser = async (req, res) => {
 
     // Hash the password before storing it
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const rolesJson = JSON.stringify(roles);
+    const tabsJson = JSON.stringify(tabs);
     const formsJson = JSON.stringify(forms);
 
     // Insert the new user into the database
     const [result] = await promisePool.query(
-      'INSERT INTO users (first_name, last_name, mail, accessible_roles, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, mail, rolesJson, formsJson, department, job_title, hashedPassword, created_by]
+      'INSERT INTO users (first_name, last_name, mail, accessible_tabs, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, tabsJson, formsJson, department, job_title, hashedPassword, created_by]
     );
 
    // Insert into audit log
@@ -83,7 +83,7 @@ const createUser = async (req, res) => {
       first_name,
       last_name,
       mail,
-      accessible_roles: JSON.parse(rolesJson),
+      accessible_tabs: JSON.parse(tabsJson),
       accessible_forms: JSON.parse(formsJson),
       department,
       job_title,
