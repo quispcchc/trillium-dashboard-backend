@@ -122,7 +122,7 @@ const deleteUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-  const { user_id, first_name, last_name, mail, role, department, job_title, password, updated_by } = req.body;
+  const { user_id, first_name, last_name, mail, role, department, job_title, password, updated_by, accessible_tabs, accessible_forms } = req.body;
 
   try {
     // Fetch the user from the database
@@ -175,7 +175,22 @@ const updateUser = async (req, res) => {
       params.push(hashedPassword);
       details.push('Password updated');
     }
-
+    if (accessible_tabs) {
+      const tabsJSON = JSON.stringify(accessible_tabs);
+      if (tabsJSON !== JSON.stringify(user.accessible_tabs)) {
+        updates.push('accessible_tabs = ?');
+        params.push(tabsJSON);
+        details.push(`accessible tabs updated to ${accessible_tabs.length > 0 ? accessible_tabs.join(', ') : 'none'}`);
+      }
+    }
+    if (accessible_forms) {
+      const formsJSON = JSON.stringify(accessible_forms);
+      if (formsJSON !== JSON.stringify(user.accessible_forms)) {
+        updates.push('accessible_forms = ?');
+        params.push(formsJSON);
+        details.push(`accessible forms updated to ${accessible_forms.length > 0 ? accessible_forms.join(', ') : 'none'}`);
+      }
+    }
     if (updated_by) {
       updates.push('updated_by = ?');
       params.push(updated_by);
