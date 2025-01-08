@@ -51,7 +51,7 @@ const getAuditLogs = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { first_name, last_name, mail, tabs, forms, department, job_title, password, created_by } = req.body;
+  const { first_name, last_name, mail, role, tabs, forms, department, job_title, password, created_by } = req.body;
 
   try {
     // Checking if the user already exists
@@ -67,8 +67,8 @@ const createUser = async (req, res) => {
 
     // Insert the new user into the database
     const [result] = await promisePool.query(
-      'INSERT INTO users (first_name, last_name, mail, accessible_tabs, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, mail, tabsJson, formsJson, department, job_title, hashedPassword, created_by]
+      'INSERT INTO users (first_name, last_name, mail, role, accessible_tabs, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, role, tabsJson, formsJson, department, job_title, hashedPassword, created_by]
     );
 
    // Insert into audit log
