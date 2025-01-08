@@ -83,6 +83,7 @@ const createUser = async (req, res) => {
       first_name,
       last_name,
       mail,
+      role,
       accessible_tabs: JSON.parse(tabsJson),
       accessible_forms: JSON.parse(formsJson),
       department,
