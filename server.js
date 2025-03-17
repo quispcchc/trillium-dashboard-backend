@@ -21,16 +21,16 @@ app.use(bodyParser.json());
 app.use('/api', authRoutes);
 
 // Routes
-app.post('/login', login);
-app.get('/users', authenticateJWT, getAllUsers);
-app.get('/audit-logs', getAuditLogs);
-app.post('/create-user', createUser);
-app.delete('/users/:id', deleteUser);
-app.put('/users/:id', updateUser);
-app.post('/reset-password', resetPassword);
-app.post('/reset-password/:token', resetPasswordWithToken);
+app.post('/api/login', login);
+app.get('/api/users', authenticateJWT, getAllUsers);
+app.get('/api/audit-logs', getAuditLogs);
+app.post('/api/create-user', createUser);
+app.delete('/api/users/:id', deleteUser);
+app.put('/api/users/:id', updateUser);
+app.post('/api/reset-password', resetPassword);
+app.post('/api/reset-password/:token', resetPasswordWithToken);
 
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.send('Backend is running');
 });
 
