@@ -245,7 +245,7 @@ const resetPassword = async (req, res) => {
     if (process.env.NODE_ENV === 'development') {
       resetUrl = `http://localhost:4200/reset-password/${resetToken}`;
     } else {
-      resetUrl = `https://frontend-dot-trillium-dashboard.nn.r.appspot.com/reset-password/${resetToken}`;
+      resetUrl = `https://dashboards.carlingtonchc.com/reset-password/${resetToken}`;
     }
     const mailOptions = {
       from: process.env.EMAIL_USER,

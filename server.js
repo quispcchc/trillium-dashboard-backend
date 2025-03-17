@@ -8,6 +8,15 @@ const authRoutes = require('./src/routes/authRoutes');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const corsOptions = {
+  origin: '*',
+  methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type'
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(bodyParser.json());
 app.use(cors({
   origin: 'https://dashboards.carlingtonchc.com',
@@ -25,6 +34,10 @@ app.delete('/users/:id', deleteUser);
 app.put('/users/:id', updateUser);
 app.post('/reset-password', resetPassword);
 app.post('/reset-password/:token', resetPasswordWithToken);
+
+app.get('/health', (req, res) => {
+  res.send('Backend is running');
+});
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
