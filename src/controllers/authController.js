@@ -1,11 +1,10 @@
-const jwt = require('jsonwebtoken'); // Import jsonwebtoken
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('../utils/mailer');
 const { JWT_SECRET, DB_CONFIG } = require('../config/config');
 const mysql = require('mysql2');
 
-// Create a MySQL connection pool
 const pool = mysql.createPool(DB_CONFIG);
 const promisePool = pool.promise();
 
@@ -13,7 +12,6 @@ const login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Fetch user from the database
     const [rows] = await promisePool.query('SELECT * FROM users WHERE mail = ?', [username]);
     const user = rows[0];
 
@@ -22,7 +20,7 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, userName: user.first_name, userRole: user.role, userEmail: user.mail, accessibleTabs: user.accessible_tabs, accessibleForms: user.accessible_forms});
+    res.json({ token, userName: user.first_name, userEmail: user.mail, accessibleTabs: user.accessible_tabs, accessibleForms: user.accessible_forms});
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -32,7 +30,7 @@ const login = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
   try {
-    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title, role, accessible_tabs, accessible_forms FROM users');
+    const [rows] = await promisePool.query('SELECT user_id, first_name, last_name, department, mail, job_title, accessible_tabs, accessible_forms FROM users');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -51,39 +49,33 @@ const getAuditLogs = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { first_name, last_name, mail, role, tabs, forms, department, job_title, password, created_by } = req.body;
+  const { first_name, last_name, mail, tabs, forms, department, job_title, password, created_by } = req.body;
 
   try {
-    // Checking if the user already exists
     const [existingUserRows] = await promisePool.query('SELECT * FROM users WHERE mail = ?', [mail]);
     if (existingUserRows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash the password before storing it
     const hashedPassword = bcrypt.hashSync(password, 10);
     const tabsJson = JSON.stringify(tabs);
     const formsJson = JSON.stringify(forms);
 
-    // Insert the new user into the database
     const [result] = await promisePool.query(
-      'INSERT INTO users (first_name, last_name, mail, role, accessible_tabs, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, mail, role, tabsJson, formsJson, department, job_title, hashedPassword, created_by]
+      'INSERT INTO users (first_name, last_name, mail, accessible_tabs, accessible_forms, department, job_title, password, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, mail, tabsJson, formsJson, department, job_title, hashedPassword, created_by]
     );
 
-   // Insert into audit log
     await promisePool.query(
       'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
       [created_by, `Created user with email: ${mail}`]
     );
 
-    // Fetch the newly created user
     const newUser = {
       user_id: result.insertId,
       first_name,
       last_name,
       mail,
-      role,
       accessible_tabs: JSON.parse(tabsJson),
       accessible_forms: JSON.parse(formsJson),
       department,
@@ -102,20 +94,18 @@ const deleteUser = async (req, res) => {
   const { updated_by, mail } = req.body;
 
   try {
-    // Delete the user from the database
     const [result] = await promisePool.query('DELETE FROM users WHERE user_id = ?', [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Insert into audit log
     await promisePool.query(
       'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
       [updated_by, `Deleted user with email: ${mail}`]
     );
 
-    res.status(204).send(); // No content response
+    res.status(204).send();
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -123,10 +113,9 @@ const deleteUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-  const { user_id, first_name, last_name, mail, role, department, job_title, password, updated_by, accessible_tabs, accessible_forms } = req.body;
+  const { user_id, first_name, last_name, mail, department, job_title, password, updated_by, accessible_tabs, accessible_forms } = req.body;
 
   try {
-    // Fetch the user from the database
     const [rows] = await promisePool.query('SELECT * FROM users WHERE user_id = ?', [user_id]);
     const user = rows[0];
 
@@ -134,12 +123,10 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Prepare the update query and parameters
     const updates = [];
     const params = [];
     const details = [];
 
-    // Update fields only if they are provided
     if (first_name && first_name !== user.first_name) {
       updates.push('first_name = ?');
       params.push(first_name);
@@ -154,11 +141,6 @@ const updateUser = async (req, res) => {
       updates.push('mail = ?');
       params.push(mail);
       details.push(`mail changed from ${user.mail} to ${mail}`);
-    }
-    if (role && role !== user.role) {
-      updates.push('role = ?');
-      params.push(role);
-      details.push(`role changed from ${user.role} to ${role}`);
     }
     if (department && department !== user.department) {
       updates.push('department = ?');
@@ -197,18 +179,15 @@ const updateUser = async (req, res) => {
       params.push(updated_by);
     }
 
-    // If no fields to update, return a message
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
 
-    // Combine updates and execute query
     const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE user_id = ?`;
     params.push(user_id);
 
     await promisePool.query(updateQuery, params);
 
-    // Insert into audit log only the changes that were made
     if (details.length > 0) {
       await promisePool.query(
         'INSERT INTO audit_logs (performed_by, details) VALUES (?, ?)',
@@ -235,9 +214,8 @@ const resetPassword = async (req, res) => {
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    // Format the expiry date to MySQL DATETIME format
     const formattedExpiry = resetTokenExpiry.toISOString().slice(0, 19).replace('T', ' ');
 
     await promisePool.query('UPDATE users SET resetToken = ?, resetTokenExpiry = ? WHERE mail = ?', [resetToken, formattedExpiry, email]);
@@ -267,8 +245,6 @@ const resetPassword = async (req, res) => {
   }
 };
 
-
-// Reset Password with Token
 const resetPasswordWithToken = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
