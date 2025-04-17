@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const  authenticateJWT  = require('./src/middleware/authMiddleware');
-const { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken } = require('./src/controllers/authController');
+const { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken, getAllDashboards } = require('./src/controllers/authController');
 const authRoutes = require('./src/routes/authRoutes');
 
 const app = express();
@@ -29,6 +29,7 @@ app.delete('/api/users/:id', deleteUser);
 app.put('/api/users/:id', updateUser);
 app.post('/api/reset-password', resetPassword);
 app.post('/api/reset-password/:token', resetPasswordWithToken);
+app.get('/api/dashboards', getAllDashboards);
 
 app.get('/api/health', (req, res) => {
   res.send('Backend is running');

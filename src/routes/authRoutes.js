@@ -11,5 +11,6 @@ router.delete('/users/:id', authController.deleteUser);
 router.put('/users/:id', authController.updateUser);
 router.post('/reset-password', authController.resetPassword);
 router.post('/reset-password/:token', authController.resetPasswordWithToken);
+router.get('/dashboards', authController.getAllDashboards);
 
 module.exports = router;

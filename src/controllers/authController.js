@@ -267,4 +267,14 @@ const resetPasswordWithToken = async (req, res) => {
   }
 };
 
-module.exports = { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken };
+const getAllDashboards = async (req, res) => {
+  try {
+    const [rows] = await promisePool.query('SELECT id, name, label, img, power_bi_url, status, tab_order FROM dashboards');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching dashboards:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { login, getAllUsers, getAuditLogs, createUser, deleteUser, updateUser, resetPassword, resetPasswordWithToken, getAllDashboards };
